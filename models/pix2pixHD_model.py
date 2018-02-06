@@ -182,7 +182,7 @@ class Pix2PixHDModel(BaseModel):
         if self.use_features:       
             # sample clusters from precomputed features             
             feat_map = self.sample_features(inst_map)
-            input_concat = torch.cat((input_label, feat_map), dim=1)                        
+            input_concat = torch.cat((input_label, Variable(feat_map)), dim=1)                        
         else:
             input_concat = input_label                
         fake_image = self.netG.forward(input_concat)
@@ -202,7 +202,7 @@ class Pix2PixHDModel(BaseModel):
                 feat = features_clustered[label]
                 cluster_idx = np.random.randint(0, feat.shape[0]) 
                                             
-                idx = (inst == i).nonzero()
+                idx = (inst == np.int(i)).nonzero()
                 for k in range(self.opt.feat_num):                                    
                     feat_map[idx[:,0], idx[:,1] + k, idx[:,2], idx[:,3]] = feat[cluster_idx, k] 
         return feat_map
@@ -219,7 +219,7 @@ class Pix2PixHDModel(BaseModel):
             feature[i] = np.zeros((0, feat_num+1))
         for i in np.unique(inst_np):
             label = i if i < 1000 else i//1000
-            idx = (inst == i).nonzero()
+            idx = (inst == np.int(i)).nonzero()
             num = idx.size()[0]
             idx = idx[num//2,:]
             val = np.zeros((1, feat_num+1))                        
