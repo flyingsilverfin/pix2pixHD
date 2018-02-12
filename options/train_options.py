@@ -26,7 +26,7 @@ class TrainOptions(BaseOptions):
         # new options
         self.parser.add_argument('--cos_decay', action='store_true', help="use cosine learning rate decay for 1 cycle")
         self.parser.add_argument('--cos_decay_update_iters', type=int, default=100, help='Number of iterations before updating learning rate')
-        self.parser.add_argument('--started_epch', type=int, default=None, help="Used in conjunction with cosine decay + continue_training. Calculates correct lr using cosine decay given saved epoch/iter and starting epoch (assumes iter 0 on that epoch)")
+        self.parser.add_argument('--started_epoch', type=int, default=None, help="Used in conjunction with cosine decay + continue_training. Calculates correct lr using cosine decay given saved epoch/iter and starting epoch (assumes iter 0 on that epoch)")
 
         # for discriminators        
         self.parser.add_argument('--num_D', type=int, default=2, help='number of discriminators to use')

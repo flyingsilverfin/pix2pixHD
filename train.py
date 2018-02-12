@@ -19,12 +19,12 @@ class CosLearningRateDecay():
     # Note: stateless after initialization
     def __init__(self, start_epoch, stop_epoch, iters_per_epoch, max_lr, min_lr=0.0):
         self.start_epoch = start_epoch
-        self.start_iter = start_iter
+#        self.start_iter = start_iter
 
         self.max_lr = max_lr
         self.min_lr = min_lr
 
-        self.start_iters = start_poch * iters_per_epoch
+        self.start_iters = start_epoch * iters_per_epoch
 
         # spill one
         full_epochs_remaining = stop_epoch - start_epoch# + 1
