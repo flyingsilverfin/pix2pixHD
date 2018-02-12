@@ -251,12 +251,16 @@ class Pix2PixHDModel(BaseModel):
         self.optimizer_G = torch.optim.Adam(params, lr=self.opt.lr, betas=(self.opt.beta1, 0.999)) 
         print('------------ Now also finetuning global generator -----------')
 
-    def update_learning_rate(self):
-        lrd = self.opt.lr / self.opt.niter_decay
-        lr = self.old_lr - lrd        
+    def update_learning_rate(self, override_lr=None):
+        if override_lr:
+            lr = override_lr
+        else:
+            lrd = self.opt.lr / self.opt.niter_decay
+            lr = self.old_lr - lrd        
         for param_group in self.optimizer_D.param_groups:
             param_group['lr'] = lr
         for param_group in self.optimizer_G.param_groups:
             param_group['lr'] = lr
         print('update learning rate: %f -> %f' % (self.old_lr, lr))
         self.old_lr = lr
+    

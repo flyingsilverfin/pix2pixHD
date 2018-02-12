@@ -12,6 +12,43 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
+
+# ----- Class to manage cosine rate decay -----
+# Currently only handles new cycles from epoch boundaries
+class CosLearningRateDecay():
+    # Note: stateless after initialization
+    def __init__(self, start_epoch, stop_epoch, iters_per_epoch, max_lr, min_lr=0.0):
+        self.start_epoch = start_epoch
+        self.start_iter = start_iter
+
+        self.max_lr = max_lr
+        self.min_lr = min_lr
+
+        self.start_iters = start_poch * iters_per_epoch
+
+        # spill one
+        full_epochs_remaining = stop_epoch - start_epoch# + 1
+        #this_epoch_iters_remaining = iters_per_epoch - start_iter
+
+        #total number of iterations to be completed this cosine cycle
+        self.total_iters_this_cycle = full_epochs_remaining * iters_per_epoch #+ (this_epoch_iters_remaining - stop_iter)
+    
+    """
+    params:
+        total_iter: total number of iterations completed since start
+
+    formula: 
+    lr_min + 0.5*(lr_max - lr_min) * (1 + cos(pi*current_total_iter/target_iter))
+    """
+    def get_lr(self, total_iter):
+        iters_elapsed = total_iter - self.start_iters
+        learning_rate = self.min_lr
+        learning_rate += 0.5*(self.max_lr - self.min_lr) * (1 + np.cos(np.pi * (iters_elapsed / self.total_iters_this_cycle)))
+        return learning_rate
+
+# ----- end CosLearningRateDecay class -----
+
+
 opt = TrainOptions().parse()
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
@@ -35,10 +72,42 @@ dataset = data_loader.load_data()
 dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 
+
+total_steps = (start_epoch-1) * dataset_size + epoch_iter    
+
+
+if opt.cos_decay:
+    print("Using cosine decay for one lr => lr = 0 cycle")
+    print("Using niter_decay as period of cycle (single lr => 0 cycle)")
+    if opt.started_epoch and opt.started_epoch != start_epoch:
+        # definitely NOT starting a new cosine cycle -- continuing
+        print("Calculating LR from starting epoch: ", opt.started_epoch)
+        
+
+        # total_epochs_since_cycle_start = start_epoch - opt.started_epoch
+        # iter_this_epoch = epoch_iter
+        # total_iters_since_cycle_start = total_epochs_since_cycle_start * dataset_size  + epoch_iter
+        # total_iters_this_cycle = opt.niter_decay * dataset_size
+        
+        # print("Continuing with lr = ", learning_rate)
+        # opt.lr = learning_rate
+    else:
+        print("Starting new cosine learning rate decay")
+    cos_decay = CosLearningRateDecay(start_epoch=opt.started_epoch, 
+                                     stop_epoch=opt.niter_decay, 
+                                     iters_per_epoch=dataset_size, 
+                                     max_lr=opt.lr
+                                    )
+    lr = cos_decay.get_lr(total_steps)
+    print("Initial Learning Rate = ", lr)
+    opt.lr = lr
+
+
+
+
 model = create_model(opt)
 visualizer = Visualizer(opt)
 
-total_steps = (start_epoch-1) * dataset_size + epoch_iter    
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
     epoch_start_time = time.time()
     if epoch != start_epoch:
@@ -97,6 +166,12 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             model.module.save('latest')            
             np.savetxt(iter_path, (epoch, epoch_iter), delimiter=',', fmt='%d')
        
+        
+        if opt.cos_decay and total_steps % opt.cos_decay_update_iters == 0:
+            new_lr = cos_decay.get_lr(total_steps)
+            model.module.update_learning_rate(override_lr=new_lr)
+
+
     # end of epoch 
     iter_end_time = time.time()
     print('End of epoch %d / %d \t Time Taken: %d sec' %
@@ -114,5 +189,5 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         model.module.update_fixed_params()
 
     ### linearly decay learning rate after certain iterations
-    if epoch > opt.niter:
+    if epoch > opt.niter and not opt.cos_decay:
         model.module.update_learning_rate()
