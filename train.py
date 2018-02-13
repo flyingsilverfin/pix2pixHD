@@ -24,12 +24,13 @@ class CosLearningRateDecay():
         self.max_lr = max_lr
         self.min_lr = min_lr
 
-        self.start_iters = start_epoch * iters_per_epoch
+        self.start_iters = (start_epoch - 1) * iters_per_epoch
 
         # spill one
         full_epochs_remaining = stop_epoch - start_epoch# + 1
         #this_epoch_iters_remaining = iters_per_epoch - start_iter
-
+        print("start iters: ", self.start_iters)
+        print("full epochs remaining: ", full_epochs_remaining)
         #total number of iterations to be completed this cosine cycle
         self.total_iters_this_cycle = full_epochs_remaining * iters_per_epoch #+ (this_epoch_iters_remaining - stop_iter)
     
@@ -42,6 +43,9 @@ class CosLearningRateDecay():
     """
     def get_lr(self, total_iter):
         iters_elapsed = total_iter - self.start_iters
+        print("Calculating Cos LR")
+        print("Iterations elapsed this cycle: ", iters_elapsed)
+        print("Total iterations to be completed this cycle: ", self.total_iters_this_cycle)
         learning_rate = self.min_lr
         learning_rate += 0.5*(self.max_lr - self.min_lr) * (1 + np.cos(np.pi * (iters_elapsed / self.total_iters_this_cycle)))
         return learning_rate
@@ -52,10 +56,13 @@ class CosLearningRateDecay():
 opt = TrainOptions().parse()
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
-    try:
-        start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
-    except:
-        start_epoch, epoch_iter = 1, 0
+    if opt.which_epoch and opt.which_epoch != 'latest':
+        start_epoch, epoch_iter = int(opt.which_epoch), 0
+    else:
+        try:
+            start_epoch, epoch_iter = np.loadtxt(iter_path , delimiter=',', dtype=int)
+        except:
+            start_epoch, epoch_iter = 1, 0
     print('Resuming from epoch %d at iteration %d' % (start_epoch, epoch_iter))        
 else:    
     start_epoch, epoch_iter = 1, 0
@@ -73,7 +80,10 @@ dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)
 
 
-total_steps = (start_epoch-1) * dataset_size + epoch_iter    
+total_steps = (start_epoch-1) * dataset_size
+if not opt.no_flip:
+    total_steps *= 2
+total_steps += epoch_iter    
 
 
 if opt.cos_decay:
@@ -93,9 +103,13 @@ if opt.cos_decay:
         # opt.lr = learning_rate
     else:
         print("Starting new cosine learning rate decay")
+    if not opt.no_flip:
+        iters_per_epoch = 2*dataset_size
+    else:
+        iters_per_epcoh = dataset_size
     cos_decay = CosLearningRateDecay(start_epoch=opt.started_epoch, 
-                                     stop_epoch=opt.niter_decay, 
-                                     iters_per_epoch=dataset_size, 
+                                     stop_epoch=opt.niter_decay+opt.started_epoch, 
+                                     iters_per_epoch=iters_per_epoch, 
                                      max_lr=opt.lr
                                     )
     lr = cos_decay.get_lr(total_steps)
@@ -166,7 +180,6 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
             model.module.save('latest')            
             np.savetxt(iter_path, (epoch, epoch_iter), delimiter=',', fmt='%d')
        
-        
         if opt.cos_decay and total_steps % opt.cos_decay_update_iters == 0:
             new_lr = cos_decay.get_lr(total_steps)
             model.module.update_learning_rate(override_lr=new_lr)
