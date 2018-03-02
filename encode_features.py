@@ -16,7 +16,7 @@ opt.which_epoch = 'latest'
 opt.continue_train = True
 
 opt.instance_feat = True # put in features to steer generation
-opt.name = 'label2city_512p_feat'
+opt.name = 'label2city_512_feat'
 opt.dataroot = '/local/scratch/js2173/pytorch/Selectively-Retexuring-Subimages/submodules/pix2pixHD/datasets/cityscapes/'
 opt.checkpoints_dir = '/local/scratch/js2173/pytorch/Selectively-Retexuring-Subimages/submodules/pix2pixHD/checkpoints/'
 opt.results = '/local/scratch/js2173/pytorch/Selectively-Retexuring-Subimages/submodules/pix2pixHD/results/'
@@ -37,7 +37,7 @@ model = create_model(opt)
 
 
 ########### Encode features ###########
-reencode = False
+reencode = True 
 if reencode:
         features = {}
         for label in range(opt.label_nc):

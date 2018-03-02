@@ -81,8 +81,8 @@ print('#training images = %d' % dataset_size)
 
 
 total_steps = (start_epoch-1) * dataset_size
-if not opt.no_flip:
-    total_steps *= 2
+#if not opt.no_flip:
+#    total_steps *= 2
 total_steps += epoch_iter    
 
 
@@ -103,10 +103,10 @@ if opt.cos_decay:
         # opt.lr = learning_rate
     else:
         print("Starting new cosine learning rate decay")
-    if not opt.no_flip:
-        iters_per_epoch = 2*dataset_size
-    else:
-        iters_per_epcoh = dataset_size
+ #   if not opt.no_flip:
+ #       iters_per_epoch = 2*dataset_size
+ #   else:
+    iters_per_epoch = dataset_size
     cos_decay = CosLearningRateDecay(start_epoch=opt.started_epoch, 
                                      stop_epoch=opt.niter_decay+opt.started_epoch, 
                                      iters_per_epoch=iters_per_epoch, 
